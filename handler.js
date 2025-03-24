@@ -1,6 +1,7 @@
 const session = require("express-session");
 const express = require("express");
 const dotenv = require('dotenv');
+const cors = require("cors");
 const { interpret, createActor } = require("xstate");
 dotenv.config();
 
@@ -16,12 +17,18 @@ const getSession = (memoryStore, secret) => {
 	})
 }
 
-const httpServer = (memoryStore) => {
+const httpServer = () => {
     const app = express();
+    const memoryStore = new session.MemoryStore();
     app.use(getSession(memoryStore))
     app.use(cors());
     app.use(express.json());
     return app;
+}
+
+
+function parseJwt(token) {
+	return JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
 }
 
 const handler = (machine, req, res) => {
