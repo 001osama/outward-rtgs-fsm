@@ -3,6 +3,7 @@ const { assign, createMachine, createActor } = require('xstate');
 
 const machine = createMachine(
     {
+        /** @xstate-layout N4IgpgJg5mDOIC5QAoC2BDAxgCwJYDswBKAOgKwBdcA3MAYgBUB5AcRYBkBRAbQAYBdRKAAOAe1i4qo-EJAAPRAEYAbAE4ANCACeSgOy6SAFgCsAZkUAmYwF9rmtFjyFSlGvWZsufQUhBiJUjK+CggqGtqIAByKJDa2mviiEHCyDjgExLL+krjSsiEAtMqaOghF8SBpTsRk+K60WeI5ecGIhhYlSoq8JKa8qpGqxpGmo2OGFVUZLphUDb7ZgfmIFqqmvZbGnaGWJJH9g8Nj47a2QA */
         context: {
             user: '',
             noOfRequest:'',
@@ -34,24 +35,5 @@ const machine = createMachine(
     }
 );
 
-const machineStore = new Map();
 
-function getOrCreateMachine(userId)
-{
-    if(!machineStore.has(userId))
-    {
-        const actor = createActor(machine).start();
-        
-        actor.subscribe((snapshot) => {
-            console.log('Value:', snapshot.value);
-        });    
-        
-        machineStore.set(userId, actor);
-    }
-
-
-    return machineStore.get(userId);
-}
-
-
-module.exports = { getOrCreateMachine };
+module.exports =  machine;
