@@ -4,11 +4,10 @@ const express = require("express");
 const dotenv = require('dotenv');
 const cors = require("cors");
 const crypto = require("crypto");
-const { interpret, createActor } = require("xstate");
+const { createActor } = require("xstate");
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 dotenv.config();
 const jwt = require("jsonwebtoken");
-const { nextTick } = require("process");
 const keys = [];
 
 const getSession = (memoryStore, secret) => {
@@ -66,24 +65,28 @@ const handler = async (machine, req, res) => {
         let key;
         try
         {
-            const response = await fetch(`http://localhost:8088/auth/login`, 
-                {
-                    method: 'POST',
-                    body: JSON.stringify(reqData),
-                    headers: {'Content-Type':'application/json'}
-                },
-            );
-            const data = await response.json();
+            // const response = await fetch(`http://localhost:8088/auth/login`, 
+            //     {
+            //         method: 'POST',
+            //         body: JSON.stringify(reqData),
+            //         headers: {'Content-Type':'application/json'}
+            //     },
+            // );
+            // const data = await response.json();
 
-            if(!data.success)
-            {
-                console.log("Login failed From Quarkus Api")
-                console.log(ex);
-                return res.json({ status:"error", data:data.body, message:data.message})
-            }
+            // if(!data.success)
+            // {
+            //     console.log("Login failed From Quarkus Api")
+            //     console.log(ex);
+            //     return res.json({ status:"error", data:data.body, message:data.message})
+            // }
 
 
-            const user = data.data;  
+            // const user = data.data; 
+            const user = {
+                userName:"Osama",
+                branchCode:"1234"
+            } 
             const timestamp = Date.now().toString();
 
             key = crypto
@@ -113,7 +116,7 @@ const handler = async (machine, req, res) => {
             updatedAt:'',
             sendingFunction: (ctx, myKey) => {
                 var resp = keys[myKey].res;
-                if(resp.headersSent)
+                if(!resp.headersSent)
                     resp.json(ctx);
             }
         };
@@ -121,7 +124,7 @@ const handler = async (machine, req, res) => {
         const newMachine = machine.provide({
             actions: {
                 sendPartialCtx: assign({
-                    partialCtx: (context, event) => {
+                    partialCtx: ({context, event}) => {
                         keys[key].sendingFunction(context.partialCtx, key);
                         keys[key].updatedAt = Date.now();
                         return {};
@@ -150,10 +153,9 @@ const handler = async (machine, req, res) => {
                     delete keys[key];
                 }
             }
-        )
+        );
 
         console.log(`Data from Front-End = ${JSON.stringify(reqData)} `);
-
         actor.send({
             ...reqData,
             type: httpReq.transition
