@@ -8,6 +8,7 @@ const { interpret, createActor } = require("xstate");
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 dotenv.config();
 const jwt = require("jsonwebtoken");
+const { nextTick } = require("process");
 const keys = [];
 
 const getSession = (memoryStore, secret) => {
@@ -42,11 +43,12 @@ function parseJwt(token) {
 
 const handler = async (machine, req, res) => {
     let httpReq = req.body;
+    var reqData = httpReq.data;
+
     //Put special id in the jwt to distinguish different fsm
     let key = parseJwt(req.headers.authorization)?.sid;
     if(key && key in keys)
     {
-        var reqData = httpReq.data;
             keys[key].res = res;
             var actor = keys[key].actor;
             console.log(`Data from Front-End = ${JSON.stringify(reqData)}`);
@@ -64,10 +66,10 @@ const handler = async (machine, req, res) => {
         let key;
         try
         {
-            const response = await fetch(`http://localhost:8087/auth/login`, 
+            const response = await fetch(`http://localhost:8088/auth/login`, 
                 {
                     method: 'POST',
-                    body: JSON.stringify(req.body),
+                    body: JSON.stringify(reqData),
                     headers: {'Content-Type':'application/json'}
                 },
             );
@@ -116,7 +118,7 @@ const handler = async (machine, req, res) => {
             }
         };
 
-        const newMachine = machine.withConfig({
+        const newMachine = machine.provide({
             actions: {
                 sendPartialCtx: assign({
                     partialCtx: (context, event) => {
@@ -132,10 +134,23 @@ const handler = async (machine, req, res) => {
         actor.start();
         keys[key].actor = actor;
 
-        const subscription = actor.subscribe((snapshot) => {
-            console.log(`Current Context: ${snapshot.context}`);
-            console.log(`Current State: ${snapshot.value}`);
-        });
+
+        const subscription = actor.subscribe(
+            {
+                next: (snapshot) => {
+                    console.log(`Current Context: ${snapshot.context}`);
+                    console.log(`Current State: ${snapshot.value}`);
+                },
+                error: (error) => {
+                    console.error(`Error occured`,error);
+                },
+                complete: () => {
+                    console.log("------------------!!! Machine Stopped !!!-----------------");
+                    subscription.unsubscribe();
+                    delete keys[key];
+                }
+            }
+        )
 
         console.log(`Data from Front-End = ${JSON.stringify(reqData)} `);
 
@@ -144,11 +159,6 @@ const handler = async (machine, req, res) => {
             type: httpReq.transition
         });
 
-        actor.onStop(()=> {
-            console.log("------------------!!! Machine Stopped !!!-----------------");
-            subscription.unsubscribe();
-            delete keys[key];
-        });
 
         console.log(`Front-End transition = ${httpReq.transition}`);
     }
