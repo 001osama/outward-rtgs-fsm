@@ -12,7 +12,7 @@ const machine = createMachine(
       idle: {
         on:{
           INIT : {
-            actions:['receiveData','sendPartialCtx'], 
+            actions:['receiveData', 'loadPartialCtx','sendPartialCtx'], 
             target:"mainMenu"
           },
         }
@@ -37,14 +37,10 @@ const machine = createMachine(
           return event;
         }
       }),
-      loadData: assign({
+      loadPartialCtx: assign({
         partialCtx: (context, event) => {
           let partialCtxClone = Object.assign({}, context.partialCtx);
 
-          // partialCtxClone.token = context.megaset681.listOfStatus;
-          // partialCtxClone.receiveTranModeList = context.megaset681.receiveTranModeList;
-          // partialCtxClone.receiveChannelList = context.megaset681.receiveChannelList;
-          // partialCtxClone.header = context.header;
           return partialCtxClone;
         }
       })
