@@ -11,7 +11,7 @@ const machine = createMachine(
     states: {
       idle: {
         on:{
-          INIT : {
+          LOGIN : {
             actions:['receiveData', 'loadPartialCtx','sendPartialCtx'], 
             target:"mainMenu"
           },
@@ -42,6 +42,7 @@ const machine = createMachine(
         partialCtx: ({context, event}) => {
           let partialCtxClone = Object.assign({}, context.partialCtx);
           partialCtxClone.dummyData = "Testing";
+          partialCtxClone.token = event.jwtToken;
           return partialCtxClone;
         }
       })

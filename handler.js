@@ -26,6 +26,7 @@ const httpServer = () => {
     app.use(getSession(memoryStore))
     app.use(cors());
     app.use(express.json());
+    app.use(express.urlencoded());
     return app;
 }
 
@@ -156,11 +157,12 @@ const handler = async (machine, req, res) => {
         );
 
         console.log(`Data from Front-End = ${JSON.stringify(reqData)} `);
+        
         actor.send({
             ...reqData,
+            jwtToken,
             type: httpReq.transition
         });
-
 
         console.log(`Front-End transition = ${httpReq.transition}`);
     }
