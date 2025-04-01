@@ -19,13 +19,21 @@ const machine = createMachine(
       },
       mainMenu: {
         on: {
-          TO_RTGS: "rtgs", 
+          TO_RTGS: "rtgs",
+          SIGNOFF: {
+            actions:['sendPartialCtx'],
+            target:['Final']
+          } 
         },
       },
       rtgs: {
         on: {
           TO_MAIN_MENU: "mainMenu", 
         },
+      },
+      Final: {
+        type: "final",
+        entry: ["sendPartialCtx"],
       },
     },
   },
@@ -41,7 +49,7 @@ const machine = createMachine(
       loadPartialCtx: assign({
         partialCtx: ({context, event}) => {
           let partialCtxClone = Object.assign({}, context.partialCtx);
-          partialCtxClone.dummyData = "Testing";
+          partialCtxClone.message = "Authentication is Successful";
           partialCtxClone.token = event.jwtToken;
           return partialCtxClone;
         }
