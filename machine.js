@@ -1,34 +1,65 @@
 const { createMachine, assign } = require("xstate");
+const { fetchActor, trigger } = require("./fetchActor");
 
 const machine = createMachine(
   {
     id: "userStateMachine", 
-    initial: "idle",
+    initial: "Idle",
     context: {
       partialCtx: {},
-      request:{}
+      request:{},
+      fetchActorRef:{},
     },
     states: {
-      idle: {
+      Idle: {
         on:{
           LOGIN : {
             actions:['receiveData', 'loadPartialCtx','sendPartialCtx'], 
-            target:"mainMenu"
+            target:"MainMenu"
           },
+          GETDATA: {
+            actions:[
+              'spawnFetchActor',
+              async ({context}) => {
+                trigger(
+                  context, 
+                  'http://localhost:8088/data-access/getuserinfo',
+                  'POST',
+                  null,
+                  'FETCH_SUCCESS',
+                  'FETCH_FAILURE',
+                )
+              }
+            ]
+          },
+          FETCH_SUCCESS:{
+            target:'Final',
+            actions:[
+              'receiveData',
+              'sendPartialCtx'
+            ]
+          },
+          FETCH_FAILURE:{
+            target:'Final',
+            actions:[
+              'receiveData',
+              'sendPartialCtx'
+            ]
+          }
         }
       },
-      mainMenu: {
+      MainMenu: {
         on: {
-          TO_RTGS: "rtgs",
+          TO_RTGS: "Rtgs",
           SIGNOFF: {
             actions:['sendPartialCtx'],
             target:['Final']
-          } 
+          }
         },
       },
-      rtgs: {
+      Rtgs: {
         on: {
-          TO_MAIN_MENU: "mainMenu", 
+          TO_MAIN_MENU: "MainMenu",
         },
       },
       Final: {
@@ -53,6 +84,9 @@ const machine = createMachine(
           partialCtxClone.token = event.jwtToken;
           return partialCtxClone;
         }
+      }),
+      spawnFetchActor: assign({
+        fetchActorRef: ({spawn}) => spawn(fetchActor)
       })
     },
   }

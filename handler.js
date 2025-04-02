@@ -66,27 +66,27 @@ const handler = async (machine, req, res) => {
         let key;
         try
         {
-            const response = await fetch(`http://localhost:8088/auth/login`, 
-                {
-                    method: 'POST',
-                    body: JSON.stringify(reqData),
-                    headers: {'Content-Type':'application/json'}
-                },
-            );
-            const data = await response.json();
+            // const response = await fetch(`http://localhost:8088/auth/login`, 
+            //     {
+            //         method: 'POST',
+            //         body: JSON.stringify(reqData),
+            //         headers: {'Content-Type':'application/json'}
+            //     },
+            // );
+            // const data = await response.json();
 
-            if(!data.success)
-            {
-                console.log("Login failed From Quarkus Api")
-                return res.json({ status:"error", data:data.body, message:data.message})
-            }
+            // if(!data.success)
+            // {
+            //     console.log("Login failed From Quarkus Api")
+            //     return res.json({ status:"error", data:data.body, message:data.message})
+            // }
 
 
-            const user = data.data; 
-            // const user = {
-            //     userName:"Osama",
-            //     branchCode:"1234"
-            // } 
+            // const user = data.data; 
+            const user = {
+                userName:"Osama",
+                branchCode:"1234"
+            } 
             const timestamp = Date.now().toString();
 
             key = crypto

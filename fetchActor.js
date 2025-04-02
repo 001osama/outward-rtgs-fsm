@@ -1,47 +1,105 @@
-const { createMachine, assign } = require("xstate");
+const { createMachine, assign, sendParent } = require("xstate");
 
 const fetchActor = createMachine(
     {
         id: "FetchActor",
-        initial : "IDLE",
+        initial: "Idle",
         context: {
             request:{},
+            success:'',
+            failure:'',
             isSuccess:true,
-            errorMessage:""
+            errorMessage:"",                               
+            url:"",
         },
         states:{
-            IDLE:{
+            Idle:{
                 on:{
                     FETCH:{
-                        actions:['recieveEvent'],
-                        target:'GETDATA'
+                        actions:['receiveEvent'],
+                        target:'GetData'
                     }
                 }
             },
-            GETDATA:{
-                entry:{
-                    invoke:{
-                        src:'getData',
-                        onDone:{
-
-                        }
+            GetData:{
+                invoke:{
+                    src:'getData',
+                    onDone:{
+                        target:'Final',
+                        actions: [
+                            assign({
+                                result: ({context, event}) => {
+                                    console.log("Event Received on Done", event);
+                                    return event.data.data;
+                                }
+                            }),
+                            sendParent(({context})=>({
+                                ...context,
+                                type: context.success
+                            }))
+                        ]
+                    },
+                    onError:{
+                        target:'Final',
+                        actions:[
+                            assign({
+                                result: ({context, event}) => {
+                                    console.log("error occurred");
+                                    return event.data.data;
+                                }
+                            }),
+                            sendParent(({context})=>({
+                                ...context,
+                                type: context.success
+                            }))
+                        ]
                     }
                 }
+            },
+            Final:{
+                actions:['testingWorking'],
             }   
 
         }
     },
     {
       actions: {
-        recieveEvent : assign(({context, event})=>{
-            console.log("recieve event function recieve the body",event);
+        receiveEvent : assign(({context, event, value})=>{
+            console.log("recieve event function working, recieved the body",event);
             return {
-                request: event.value
+                request: event.value,
+                success: event.value.success,
+                failure: event.value.failure,
             }
+        }),
+        testingWorking: assign(({context, event}) => {
+            console.log("Function is working")
         })
       },
       services:{
-
+        getData: async ({context, event}) => {
+            console.log("Get Data service is being hit")
+            const options = { body: context.params }
+            return await fetch(context.url, options)
+                .then((response)=>{
+                    console.log('Getting response from API. Reponse: ', response);
+                    return {data:"dummy data"}
+                })
+                .catch((error) => {
+                    console.error('Error Occurred while hitting API', error);
+                    return Promise.reject(error);
+                });
+        }
       }
     }
 )
+
+const trigger = (context, url, requestType, parameters, success, failure)=>{
+    console.log(context);
+    context.fetchActorRef.send({
+        value: {url, requestType, parameters,success,failure},
+        type:'FETCH'
+    })
+}
+
+module.exports = {fetchActor, trigger};
