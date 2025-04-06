@@ -3,12 +3,18 @@ const { createMachine, fromPromise,setup, assign, sendParent } = require("xstate
 const fetchActor = setup({
     actors: {
         getData: fromPromise(async ({input}) => {
-            console.log("Get Data service is being hit")
-            const options = { body: input.params }
+            console.log("Get Data service is being hit");
+
+            const options = { 
+                method: input.requestType || 'GET',
+                body: input.params ? JSON.stringify(input.params) : null,
+                headers: {'Content-Type':'application/json'}
+            }
+
             return await fetch(input.url, options)
                 .then((response)=>{
                     console.log('Getting response from API. Reponse: ', response);
-                    return response;
+                    return response.json();
                 })
                 .catch((error) => {
                     console.error('Error Occurred while hitting API', error);
@@ -64,7 +70,7 @@ const fetchActor = setup({
                             assign({
                                 result: ({ context, event }) => {
                                     console.log("Event Received on Done", event);
-                                    return event.data.data;
+                                    return event.output.data;
                                 }
                             }),
                             sendParent(({ context }) => ({
