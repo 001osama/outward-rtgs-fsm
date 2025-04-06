@@ -25,7 +25,11 @@ const machine = createMachine(
                   context, 
                   'http://localhost:8088/data-access/getuserinfo',
                   'POST',
-                  null,
+                  {
+                    loginId:'osama',
+                    branchCode:'1234',
+                    password:'osama',
+                  },
                   'FETCH_SUCCESS',
                   'FETCH_FAILURE',
                 )
