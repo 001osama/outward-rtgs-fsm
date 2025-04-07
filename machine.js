@@ -9,48 +9,46 @@ const machine = createMachine(
       partialCtx: {},
       request:{},
       fetchActorRef:{},
+      branchList:[],
     },
     states: {
       Idle: {
         on:{
-          LOGIN : {
+          LOGIN: {
             actions:['receiveData', 'loadPartialCtx','sendPartialCtx'], 
             target:"MainMenu"
           },
-          GETDATA: {
-            actions:[
-              'spawnFetchActor',
-              async ({context}) => {
-                trigger(
-                  context, 
-                  'http://localhost:8088/data-access/getuserinfo',
-                  'POST',
-                  {
-                    loginId:'osama',
-                    branchCode:'1234',
-                    password:'osama',
-                  },
-                  'FETCH_SUCCESS',
-                  'FETCH_FAILURE',
-                )
-              }
-            ]
-          },
-          FETCH_SUCCESS:{
-            target:'Final',
-            actions:[
-              'receiveData',
-              'sendPartialCtx'
-            ]
-          },
-          FETCH_FAILURE:{
-            target:'Final',
-            actions:[
-              'receiveData',
-              'sendPartialCtx'
-            ]
+          FETCHLOV:'FETCH_BRANCH_LIST',
+        },
+      },
+      FETCH_BRANCH_LIST: {
+        action:[
+          'spawnFetchActor',
+          async ({context}) => {
+            trigger(
+              context, 
+              `${process.env.CAPI_URL}/getallbranches`,
+              'GET',
+              null,
+              'FETCH_SUCCESS',
+              'FETCH_FAILURE',
+            )
           }
-        }
+        ]
+      },
+      FETCH_SUCCESS:{
+        target:'Final',
+        actions:[
+          'receiveBranchList',
+          'sendPartialCtx'
+        ]
+      },
+      FETCH_FAILURE:{
+        target:'Final',
+        actions:[
+          'receiveError',
+          'sendPartialCtx'
+        ]
       },
       MainMenu: {
         on: {
@@ -68,7 +66,6 @@ const machine = createMachine(
       },
       Final: {
         type: "final",
-        entry: ["sendPartialCtx"],
       },
     },
   },
@@ -80,6 +77,30 @@ const machine = createMachine(
           console.log("Current Context is ", context)
           return event;
         }
+      }),
+      receiveError: assign({
+        partialCtx: ({context, event}) => {
+          console.log("Error Occurred while fetching", event)
+          console.log("Current Context is ", context)
+          let partialCtxClone = Object.assign({}, context.partialCtx);
+          partialCtxClone.message = event.message;
+          partialCtxClone.success = false;
+          return partialCtxClone;
+        }
+      }),
+      receiveBranchList: assign({
+        branchList:({context, event}) => {
+          console.log("Setting branchList data in context", event)
+          console.log("Current Context is ", context)
+          return event.result;
+        },
+
+        partialCtx: ({context, event}) => {
+          let partialCtxClone = Object.assign({}, context.partialCtx);
+          partialCtxClone.data = event.result;
+          return partialCtxClone;
+        }
+
       }),
       loadPartialCtx: assign({
         partialCtx: ({context, event}) => {

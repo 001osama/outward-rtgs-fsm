@@ -125,6 +125,8 @@ const handler = async (machine, req, res) => {
             actions: {
                 sendPartialCtx: assign({
                     partialCtx: ({context, event}) => {
+                        console.log(`-----------------!!!Running Send Partial!!!-------------------`);
+                        console.log(`current context: ${JSON.stringify(context)}`);
                         keys[key].sendingFunction(context.partialCtx, key);
                         keys[key].updatedAt = Date.now();
                         return {};

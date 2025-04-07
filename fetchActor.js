@@ -74,7 +74,7 @@ const fetchActor = setup({
                                 }
                             }),
                             sendParent(({ context }) => ({
-                                ...context,
+                                result: context.result,
                                 type: context.success
                             }))
                         ]
@@ -85,7 +85,7 @@ const fetchActor = setup({
                             assign({
                                 result: ({ context, event }) => {
                                     console.log("error occurred");
-                                    return event;
+                                    return event.output;
                                 }
                             }),
                             sendParent(({ context }) => ({
