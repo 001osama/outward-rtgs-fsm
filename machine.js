@@ -19,14 +19,15 @@ const machine = createMachine(
         on:{
           LOGIN: {
             actions:['receiveData', 'loadPartialCtx','sendPartialCtx'], 
-            target:"MainMenu"
+            target:"OutwardRtgs"
           },
-          FETCHLOV:'FetchBranchList',
+          
         },
       },
       MainMenu:{
         on:{
-          OUTWARDRTGS:'OutwardRtgs'
+          OUTWARDRTGS:'OutwardRtgs',
+          FETCHLOV:'FetchBranchList',
         }
       },
       OutwardRtgs: {
@@ -40,7 +41,7 @@ const machine = createMachine(
           async ({context}) => {
             trigger(
               context, 
-              `${process.env.CAPI_URL}/getallbranches`,
+              `${process.env.CAPI_URL}/getallbranchlist`,
               'GET',
               null,
               'FETCH_SUCCESS',
@@ -179,11 +180,12 @@ const machine = createMachine(
       loadPartialCtx: assign({
         partialCtx: ({context, event}) => {
           let partialCtxClone = Object.assign({}, context.partialCtx);
-          partialCtxClone.message = "Authentication is Successful";
-          partialCtxClone.token = event.jwtToken;
+          partialCtxClone.success = true;
+          partialCtxClone.data = event.jwtToken;
           return partialCtxClone;
         }
       }),
+
       loadLOVs: assign({
         partialCtx: ({context, event}) => {
           let partialCtxClone = Object.assign({}, context.partialCtx);
