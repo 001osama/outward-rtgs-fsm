@@ -69,10 +69,10 @@ const fetchActor = setup({
                     id: 'getUser',
                     src: 'getData',
                     input: ({context}) => 
-                                { 
-                                    console.log(context);
-                                    return context;
-                                },
+                            { 
+                                console.log(context);
+                                return context;
+                            },
                     onDone: {
                         target: 'Final',
                         actions: [
@@ -99,7 +99,7 @@ const fetchActor = setup({
                             }),
                             sendParent(({ context }) => ({
                                 ...context,
-                                type: context.success
+                                type: context.failure
                             }))
                         ]
                     }
