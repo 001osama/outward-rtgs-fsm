@@ -13,6 +13,11 @@ const machine = createMachine(
       currencyList:[],
       branchList:[],
       sBPTranTypeList:[],
+      purposeOfPaymentList:[],
+      accountList:[],
+      accountDetails:{},
+      selectedAccountNo:'',
+      customerNo:'',
     },
     states: {
       Idle: {
@@ -33,6 +38,8 @@ const machine = createMachine(
       OutwardRtgs: {
         on:{
           FETCHLOV:'FetchBranchList',
+          FETCHCUSTACCOUNTS:'FetchCustomerAccounts',
+          FETCHACCOUNTDETAILS:'FetchAccountDetails',
         }
       },
       FetchBranchList: {
@@ -41,7 +48,7 @@ const machine = createMachine(
           async ({context}) => {
             trigger(
               context, 
-              `${process.env.CAPI_URL}/getallbranchlist`,
+              `${process.env.CAPI_URL}/getbranchlist`,
               'GET',
               null,
               'FETCH_SUCCESS',
@@ -71,7 +78,7 @@ const machine = createMachine(
           async ({context}) => {
             trigger(
               context, 
-              `${process.env.CAPI_URL}/getallcurrencies`,
+              `${process.env.CAPI_URL}/getcurrencylist`,
               'GET',
               null,
               'FETCH_SUCCESS',
@@ -101,7 +108,37 @@ const machine = createMachine(
           async ({context}) => {
             trigger(
               context, 
-              `${process.env.CAPI_URL}/getallsbptrantypes`,
+              `${process.env.CAPI_URL}/getsbptrantypelist`,
+              'GET',
+              null,
+              'FETCH_SUCCESS',
+              'FETCH_FAILURE',
+            )
+          }
+        ],
+        on: {
+          FETCH_SUCCESS:{
+            target:'FetchPurposeOfPaymentList',
+            actions:[
+              'receiveSBPTranTypeList',
+            ]
+          },
+          FETCH_FAILURE:{
+            target:'Final',
+            actions:[
+              'receiveError',
+              'sendPartialCtx'
+            ]
+          },
+        }
+      },
+      FetchPurposeOfPaymentList: {
+        entry:[
+          'spawnFetchActor',
+          async ({context}) => {
+            trigger(
+              context, 
+              `${process.env.CAPI_URL}/getpurposeofpaymentlist`,
               'GET',
               null,
               'FETCH_SUCCESS',
@@ -113,8 +150,72 @@ const machine = createMachine(
           FETCH_SUCCESS:{
             target:'OutwardRtgs',
             actions:[
-              'receiveSBPTranTypeList',
+              'receivePurposeOfPaymentList',
               'loadLOVs',
+              'sendPartialCtx'
+            ]
+          },
+          FETCH_FAILURE:{
+            target:'Final',
+            actions:[
+              'receiveError',
+              'sendPartialCtx'
+            ]
+          },
+        }
+      },
+      FetchCustomerAccounts: {
+        entry:[
+          'receiveCustomerNo',
+          'spawnFetchActor',
+          async ({context}) => {
+            trigger(
+              context, 
+              `${process.env.CAPI_URL}/getcustomeraccountnos`,
+              'GET',
+              {customerNo: context.customerNo},
+              'FETCH_SUCCESS',
+              'FETCH_FAILURE',
+            )
+          }
+        ],
+        on: {
+          FETCH_SUCCESS:{
+            target:'OutwardRtgs',
+            actions:[
+              'receiveAccountList',
+              'sendPartialCtx'
+            ]
+          },
+          FETCH_FAILURE:{
+            target:'Final',
+            actions:[
+              'receiveError',
+              'sendPartialCtx'
+            ]
+          },
+        }
+      },
+      FetchAccountDetails: {
+        entry:[
+          'receiveAccountNo',
+          'spawnFetchActor',
+          async ({context}) => {
+            trigger(
+              context, 
+              `${process.env.CAPI_URL}/getaccountdetails`,
+              'GET',
+              {accountNo: context.selectedAccountNo},
+              'FETCH_SUCCESS',
+              'FETCH_FAILURE',
+            )
+          }
+        ],
+        on: {
+          FETCH_SUCCESS:{
+            target:'OutwardRtgs',
+            actions:[
+              'receiveAccountList',
               'sendPartialCtx'
             ]
           },
@@ -170,10 +271,61 @@ const machine = createMachine(
       }),
 
       receiveSBPTranTypeList: assign({
-        SBPTranTypeList:({context, event}) => {
+        sBPTranTypeList:({context, event}) => {
           console.log("Setting SBPTranTypeList data in context", event)
           console.log("Current Context is ", context)
           return event.result;
+        },
+      }),
+
+      receivePurposeOfPaymentList: assign({
+        purposeOfPaymentList:({context, event}) => {
+          console.log("Setting Purpose of Payment list data in context", event)
+          return event.result;
+        },
+      }),
+
+      receiveAccountNo: assign({
+        selectedAccountNo:({context, event}) => {
+          console.log("Setting Selected Account No data in context", event)
+          return event.accountNo;
+        },
+      }),
+      
+      receiveAccountDetails: assign({
+        accountDetails:({context, event}) => {
+          console.log("Setting Account Details data in context", event)
+          return event.result;
+        },
+
+        partialCtx:({context, event}) => {
+          console.log("Loading Account Details in partial context", event);
+          let partialCtxClone = Object.assign({}, context.partialCtx);
+          partialCtxClone.success = true;
+          partialCtxClone.data = event.result;
+          return partialCtxClone;
+        }
+      }),
+
+      receiveAccountList: assign({
+        accountList:({context, event}) => {
+          console.log("Setting Account list data in context", event)
+          return event.result;
+        },
+
+        partialCtx:({context, event}) => {
+          console.log("Loading account no in partial context", event);
+          let partialCtxClone = Object.assign({}, context.partialCtx);
+          partialCtxClone.success = true;
+          partialCtxClone.data = event.result;
+          return partialCtxClone;
+        }
+      }),
+
+      receiveCustomerNo: assign({
+        customerNo:({context, event}) => {
+          console.log("Setting Customer No data in context", event)
+          return event.customerNo;
         },
       }),
 
@@ -192,12 +344,14 @@ const machine = createMachine(
           partialCtxClone.data = {
             branchList: context.branchList,
             currencyList: context.currencyList,
-            sBPTranTypeList: context.sBPTranTypeList
+            sBPTranTypeList: context.sBPTranTypeList,
+            purposeOfPaymentList: context.purposeOfPaymentList
           };
           partialCtxClone.success = true;
           return partialCtxClone;
         }
       }),
+
       spawnFetchActor: assign({
         fetchActorRef: ({spawn}) => spawn(fetchActor)
       })

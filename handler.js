@@ -144,7 +144,7 @@ const handler = async (machine, req, res) => {
             {
                 next: (snapshot) => {
                     console.log(`Current State: ${snapshot.value}`);
-                    console.log(`Current Context: ${snapshot.context}`);
+                    console.log(`Current Context: ${JSON.stringify(snapshot.context)}`);
                 },
                 error: (error) => {
                     console.error(`Error occured`,error);
@@ -165,7 +165,7 @@ const handler = async (machine, req, res) => {
             type: httpReq.transition
         });
 
-        console.log(`Front-End transition Requested From State= ${httpReq.transition}`);
+        console.log(`Front-End transition Requested To State = ${httpReq.transition}`);
     }
 }
 

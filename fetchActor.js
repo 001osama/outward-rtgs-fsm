@@ -4,14 +4,23 @@ const fetchActor = setup({
     actors: {
         getData: fromPromise(async ({input}) => {
             console.log("Get Data service is being hit");
-
+            let url = input.url;
             const options = { 
                 method: input.requestType || 'GET',
+                headers: {'Content-Type':'application/json'},
                 body: input.params ? JSON.stringify(input.params) : null,
-                headers: {'Content-Type':'application/json'}
             }
 
-            return await fetch(input.url, options)
+            if (options.method && options.method.toUpperCase() === 'GET' && input.params)
+            {
+                const queryParams = new URLSearchParams(input.params).toString();
+                url += `?${queryParams}`;
+                options.body = null;
+            }
+            else
+                options.body = input.params ? JSON.stringify(input.params) : null;
+
+            return await fetch(url, options)
                 .then((response)=>{
                     console.log('Getting response from API. Reponse: ', response);
                     return response.json();
