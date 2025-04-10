@@ -32,6 +32,12 @@ const machine = setup({
           console.log("Getting response from API. Reponse: ", response);
           return response.json();
         })
+        .then((resolvedResponse) => {
+          if(!resolvedResponse.success)
+            return Promise.reject(resolvedResponse);
+
+          return resolvedResponse.data;
+        })
         .catch((error) => {
           console.error("Error Occurred while hitting API", error);
           return Promise.reject(error);
@@ -48,7 +54,6 @@ const machine = setup({
       fetchActorRef: {},
       branchList: [],
       currencyList: [],
-      branchList: [],
       sBPTranTypeList: [],
       purposeOfPaymentList: [],
       accountList: [],
@@ -60,39 +65,22 @@ const machine = setup({
       Idle: {
         on: {
           LOGIN: {
-            actions: ["receiveData", "loadPartialCtx", "sendPartialCtx"],
+            actions: [
+              assign({
+                partialCtx: ({ context, event }) => {
+                  let partialCtxClone = Object.assign({}, context.partialCtx);
+                  partialCtxClone.success = true;
+                  partialCtxClone.data = event.jwtToken;
+                  return partialCtxClone;
+                },
+              }), 
+              "sendPartialCtx"
+            ],
             target: "OutwardRtgs",
           },
         },
       },
       OutwardRtgs: {
-        invoke: {
-          id: 'getData',
-          src: 'promiseActor',
-          input:({context, event}) => (createRequest( 'url','GET',null )),
-          onDone: {
-            target: 'Final',
-            actions: [
-                assign({
-                    result: ({ context, event }) => {
-                        console.log("Event Received on Done", event);
-                        return event.output.data;
-                    }
-                })
-            ]
-          },
-          onError: {
-            target: 'Final',
-            actions: [
-                assign({
-                    result: ({ context, event }) => {
-                        console.log("Event Received on Done", event);
-                        return event.output.data;
-                    }
-                })
-            ]
-          }
-        },
         on: {
           FETCHLOV: "FetchBranchList",
           FETCHCUSTACCOUNTS: "FetchCustomerAccounts",
@@ -100,158 +88,160 @@ const machine = setup({
         },
       },
       FetchBranchList: {
-        entry: [
-          "spawnFetchActor",
-          async ({ context }) => {
-            trigger(
-              context,
-              `${process.env.CAPI_URL}/getbranchlist`,
-              "GET",
-              null,
-              "FETCH_SUCCESS",
-              "FETCH_FAILURE"
-            );
+        invoke: {
+          id: 'fetchBranchList',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest(`${process.env.CAPI_URL}/getbranchlist`,'GET',null )),
+          onDone: {
+            target: 'FetchCurrencyList',
+            actions: [
+                assign({
+                  branchList: ({ context, event }) => {
+                    console.log("Setting branchList data in context", event);
+                    return event.output;
+                  }
+                })
+            ]
           },
-        ],
-        on: {
-          FETCH_SUCCESS: {
-            target: "FetchCurrencyList",
-            actions: ["receiveBranchList"],
-          },
-          FETCH_FAILURE: {
-            target: "Final",
-            actions: ["receiveError", "sendPartialCtx"],
-          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          }
         },
       },
       FetchCurrencyList: {
-        entry: [
-          "spawnFetchActor",
-          async ({ context }) => {
-            trigger(
-              context,
-              `${process.env.CAPI_URL}/getcurrencylist`,
-              "GET",
-              null,
-              "FETCH_SUCCESS",
-              "FETCH_FAILURE"
-            );
+        invoke: {
+          id: 'fetchCurrencyList',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest(`${process.env.CAPI_URL}/getcurrencylist`,'GET',null )),
+          onDone: {
+            target: 'FetchSBPTranTypesList',
+            actions: [
+                assign({
+                  currencyList: ({ context, event }) => {
+                    console.log("Setting currencyList data in context", event);
+                    return event.output;
+                  }
+                })
+            ]
           },
-        ],
-        on: {
-          FETCH_SUCCESS: {
-            target: "FetchSBPTranTypesList",
-            actions: ["receiveCurrencyList"],
-          },
-          FETCH_FAILURE: {
-            target: "Final",
-            actions: ["receiveError", "sendPartialCtx"],
-          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          }
         },
       },
       FetchSBPTranTypesList: {
-        entry: [
-          "spawnFetchActor",
-          async ({ context }) => {
-            trigger(
-              context,
-              `${process.env.CAPI_URL}/getsbptrantypelist`,
-              "GET",
-              null,
-              "FETCH_SUCCESS",
-              "FETCH_FAILURE"
-            );
+        invoke: {
+          id: 'fetchSBPTranTypesList',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/getsbptrantypelist`,'GET',null )),
+          onDone: {
+            target: 'FetchPurposeOfPaymentList',
+            actions: [
+                assign({
+                  sBPTranTypeList: ({ context, event }) => {
+                    console.log("Setting SBP TranType List data in context", event);
+                    return event.output;
+                  }
+                })
+            ]
           },
-        ],
-        on: {
-          FETCH_SUCCESS: {
-            target: "FetchPurposeOfPaymentList",
-            actions: ["receiveSBPTranTypeList"],
-          },
-          FETCH_FAILURE: {
-            target: "Final",
-            actions: ["receiveError", "sendPartialCtx"],
-          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          }
         },
       },
       FetchPurposeOfPaymentList: {
-        entry: [
-          "spawnFetchActor",
-          async ({ context }) => {
-            trigger(
-              context,
-              `${process.env.CAPI_URL}/getpurposeofpaymentlist`,
-              "GET",
-              null,
-              "FETCH_SUCCESS",
-              "FETCH_FAILURE"
-            );
-          },
-        ],
-        on: {
-          FETCH_SUCCESS: {
-            target: "OutwardRtgs",
+        invoke: {
+          id: 'fetchPurposeOfPaymentList',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/getpurposeofpaymentlist`,'GET',null )),
+          onDone: {
+            target: 'OutwardRtgs',
             actions: [
-              "receivePurposeOfPaymentList",
-              "loadLOVs",
-              "sendPartialCtx",
-            ],
+                assign({
+                  purposeOfPaymentList: ({ context, event }) => {
+                    console.log("Setting Purpose Of Payment List data in context", event);
+                    return event.output;
+                  }
+                }),
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.data = {
+                      branchList: context.branchList,
+                      currencyList: context.currencyList,
+                      sBPTranTypeList: context.sBPTranTypeList,
+                      purposeOfPaymentList: context.purposeOfPaymentList,
+                    };
+                    partialCtxClone.success = true;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
           },
-          FETCH_FAILURE: {
-            target: "Final",
-            actions: ["receiveError", "sendPartialCtx"],
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
           },
-        },
+        }
       },
       FetchCustomerAccounts: {
-        entry: [
-          "receiveCustomerNo",
-          "spawnFetchActor",
-          async ({ context }) => {
-            trigger(
-              context,
-              `${process.env.CAPI_URL}/getcustomeraccountnos`,
-              "GET",
-              { customerNo: context.customerNo },
-              "FETCH_SUCCESS",
-              "FETCH_FAILURE"
-            );
+        invoke: {
+          id: 'fetchCustomerAccounts',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/getcustomeraccountnos`,'GET',{customerNo: event.customerNo} )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  accountList: ({ context, event }) => {
+                    console.log("Setting Account list data in context", event);
+                    return event.output;
+                  },
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event.output);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
           },
-        ],
-        on: {
-          FETCH_SUCCESS: {
-            target: "OutwardRtgs",
-            actions: ["receiveAccountList", "sendPartialCtx"],
-          },
-          FETCH_FAILURE: {
-            target: "Final",
-            actions: ["receiveError", "sendPartialCtx"],
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
           },
         },
       },
       FetchAccountDetails: {
-        entry: [
-          "receiveAccountNo",
-          "spawnFetchActor",
-          async ({ context }) => {
-            trigger(
-              context,
-              `${process.env.CAPI_URL}/getaccountdetails`,
-              "GET",
-              { accountNo: context.selectedAccountNo },
-              "FETCH_SUCCESS",
-              "FETCH_FAILURE"
-            );
+        invoke: {
+          id: 'FetchAccountDetails',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/getaccountdetails`,'GET',{accountNo: event.accountNo} )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
           },
-        ],
-        on: {
-          FETCH_SUCCESS: {
-            target: "OutwardRtgs",
-            actions: ["receiveAccountList", "sendPartialCtx"],
-          },
-          FETCH_FAILURE: {
-            target: "Final",
-            actions: ["receiveError", "sendPartialCtx"],
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
           },
         },
       },
@@ -260,16 +250,9 @@ const machine = setup({
       },
     },
   },
+  
   {
     actions: {
-      receiveData: assign({
-        request: ({ context, event }) => {
-          console.log("Setting request data in context", event);
-          console.log("Current Context is ", context);
-          return event;
-        },
-      }),
-
       receiveError: assign({
         partialCtx: ({ context, event }) => {
           console.log("Error Occurred while fetching", event);
@@ -281,107 +264,9 @@ const machine = setup({
         },
       }),
 
-      receiveBranchList: assign({
-        branchList: ({ context, event }) => {
-          console.log("Setting branchList data in context", event);
-          console.log("Current Context is ", context);
-          return event.result;
-        },
-      }),
-
-      receiveCurrencyList: assign({
-        currencyList: ({ context, event }) => {
-          console.log("Setting currencyList data in context", event);
-          console.log("Current Context is ", context);
-          return event.result;
-        },
-      }),
-
-      receiveSBPTranTypeList: assign({
-        sBPTranTypeList: ({ context, event }) => {
-          console.log("Setting SBPTranTypeList data in context", event);
-          console.log("Current Context is ", context);
-          return event.result;
-        },
-      }),
-
-      receivePurposeOfPaymentList: assign({
-        purposeOfPaymentList: ({ context, event }) => {
-          console.log("Setting Purpose of Payment list data in context", event);
-          return event.result;
-        },
-      }),
-
-      receiveAccountNo: assign({
-        selectedAccountNo: ({ context, event }) => {
-          console.log("Setting Selected Account No data in context", event);
-          return event.accountNo;
-        },
-      }),
-
-      receiveAccountDetails: assign({
-        accountDetails: ({ context, event }) => {
-          console.log("Setting Account Details data in context", event);
-          return event.result;
-        },
-
-        partialCtx: ({ context, event }) => {
-          console.log("Loading Account Details in partial context", event);
-          let partialCtxClone = Object.assign({}, context.partialCtx);
-          partialCtxClone.success = true;
-          partialCtxClone.data = event.result;
-          return partialCtxClone;
-        },
-      }),
-
-      receiveAccountList: assign({
-        accountList: ({ context, event }) => {
-          console.log("Setting Account list data in context", event);
-          return event.result;
-        },
-
-        partialCtx: ({ context, event }) => {
-          console.log("Loading account no in partial context", event);
-          let partialCtxClone = Object.assign({}, context.partialCtx);
-          partialCtxClone.success = true;
-          partialCtxClone.data = event.result;
-          return partialCtxClone;
-        },
-      }),
-
-      receiveCustomerNo: assign({
-        customerNo: ({ context, event }) => {
-          console.log("Setting Customer No data in context", event);
-          return event.customerNo;
-        },
-      }),
-
-      loadPartialCtx: assign({
-        partialCtx: ({ context, event }) => {
-          let partialCtxClone = Object.assign({}, context.partialCtx);
-          partialCtxClone.success = true;
-          partialCtxClone.data = event.jwtToken;
-          return partialCtxClone;
-        },
-      }),
-
-      loadLOVs: assign({
-        partialCtx: ({ context, event }) => {
-          let partialCtxClone = Object.assign({}, context.partialCtx);
-          partialCtxClone.data = {
-            branchList: context.branchList,
-            currencyList: context.currencyList,
-            sBPTranTypeList: context.sBPTranTypeList,
-            purposeOfPaymentList: context.purposeOfPaymentList,
-          };
-          partialCtxClone.success = true;
-          return partialCtxClone;
-        },
-      }),
-
-      spawnFetchActor: assign({
-        fetchActorRef: ({ spawn }) => spawn(fetchActor),
-      }),
+      // spawnFetchActor: assign({
+      //   fetchActorRef: ({ spawn }) => spawn(fetchActor),
+      // }),
     },
   }
 );
