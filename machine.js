@@ -85,6 +85,7 @@ const machine = setup({
           FETCHLOV: "FetchBranchList",
           FETCHCUSTACCOUNTS: "FetchCustomerAccounts",
           FETCHACCOUNTDETAILS: "FetchAccountDetails",
+          FETCHBENEFBANKLIST: "FetchBeneficiaryBankList",
         },
       },
       FetchBranchList: {
@@ -224,6 +225,32 @@ const machine = setup({
           id: 'FetchAccountDetails',
           src: 'promiseActor',
           input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/getaccountdetails`,'GET',{accountNo: event.accountNo} )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      FetchBeneficiaryBankList: {
+        invoke: {
+          id: 'FetchBeneficiaryBankList',
+          src: 'promiseActor',
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiarybanklist`,'GET',null )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
