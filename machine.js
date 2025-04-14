@@ -86,6 +86,8 @@ const machine = setup({
           FETCHCUSTACCOUNTS: "FetchCustomerAccounts",
           FETCHACCOUNTDETAILS: "FetchAccountDetails",
           FETCHBENEFBANKLIST: "FetchBeneficiaryBankList",
+          FETCHBENEFACCDETAILS: "FetchBeneficiaryAccountDetails",
+          POSTOUTWARDRTGS: "PostOutwardRtgs",
         },
       },
       FetchBranchList: {
@@ -251,6 +253,58 @@ const machine = setup({
           id: 'FetchBeneficiaryBankList',
           src: 'promiseActor',
           input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiarybanklist`,'GET',null )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      FetchBeneficiaryAccountDetails:{
+        invoke: {
+          id: 'fetchBeneficiaryAccountDetails',
+          src: 'promiseActor',
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiaryaccountdetails`,'GET',{acciban: event.accountNoOrIban} )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      PostOutwardRtgs: {
+        invoke: {
+          id: 'postOutwardRtgs',
+          src: 'promiseActor',
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/submitRtgsform`,'POST',{rtgsForm: event.rtgsForm} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
