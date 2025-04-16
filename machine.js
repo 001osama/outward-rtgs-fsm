@@ -88,6 +88,20 @@ const machine = setup({
           FETCHBENEFBANKLIST: "FetchBeneficiaryBankList",
           FETCHBENEFACCDETAILS: "FetchBeneficiaryAccountDetails",
           POSTOUTWARDRTGS: "PostOutwardRtgs",
+          SIGNOFF:{
+            actions:[
+              assign({
+                partialCtx: ({ context, event }) => {
+                  let partialCtxClone = Object.assign({}, context.partialCtx);
+                  partialCtxClone.message = 'Sign out successfully';
+                  partialCtxClone.success = true;
+                  return partialCtxClone;
+                },
+              }),
+              "sendPartialCtx",
+            ],
+            target:'Final'
+          }
         },
       },
       FetchBranchList: {
@@ -300,11 +314,16 @@ const machine = setup({
           },
         },
       },
+
       PostOutwardRtgs: {
         invoke: {
           id: 'postOutwardRtgs',
           src: 'promiseActor',
-          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/createOutwardRtgs`,'POST',event.rtgsForm)),
+          input:({context, event}) => {
+            const modifiedRequest = {...event.rtgsForm, }
+            const request = createRequest( `${process.env.CAPI_URL}/createOutwardRtgs`,'POST',event.rtgsForm)
+            return request;
+          },
           onDone: {
             target: 'OutwardRtgs',
             actions: [

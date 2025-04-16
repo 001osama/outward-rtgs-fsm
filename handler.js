@@ -91,12 +91,12 @@ const handler = async (machine, req, res) => {
 
             key = crypto
                     .createHash("sha1")
-                    .update(user.username + user.branchCode + timestamp)
+                    .update(user.loginId + user.branchCode + timestamp)
                     .digest("hex")
                     .substring(0, 8);
 
             jwtToken = jwt.sign(
-                { username: user.userName, branchCode: user.branchCode, sid:key },
+                { loginId: user.loginId, branchCode: user.branchCode, sid:key },
                 process.env.JWTSECRET,
                 { expiresIn: "24h" }
             );
