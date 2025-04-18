@@ -26,7 +26,10 @@ const machine = setup({
         options.body = null;
       } 
       else options.body = input.params ? JSON.stringify(input.params) : null;
-
+      console.log(`------------------------!!!Sending Request in URL!!!---------------------------`);
+      console.log(url);
+      console.log(`------------------------!!!Sending Request With Body!!!---------------------------`);
+      console.log(options.body);
       return await fetch(url, options)
         .then((response) => {
           console.log("Getting response from API. Reponse: ", response);
@@ -43,6 +46,22 @@ const machine = setup({
           return Promise.reject(error);
         });
     }),
+  },
+  actions: {
+    receiveError: assign({
+      partialCtx: ({ context, event }) => {
+        console.log("Error Occurred while fetching", event);
+        console.log("Current Context is ", context);
+        let partialCtxClone = Object.assign({}, context.partialCtx);
+        partialCtxClone.message = event.error.message;
+        partialCtxClone.success = false;
+        return partialCtxClone;
+      },
+    }),
+
+    // spawnFetchActor: assign({
+    //   fetchActorRef: ({ spawn }) => spawn(fetchActor),
+    // }),
   },
 }).createMachine(
   {
@@ -292,7 +311,7 @@ const machine = setup({
         invoke: {
           id: 'fetchBeneficiaryAccountDetails',
           src: 'promiseActor',
-          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiaryaccountdetails`,'GET',{acciban: event.accountNoOrIban} )),
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiaryaccountdetails`,'GET', {accOrIban: event.accOrIban, bankCode: event.bankCode} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
@@ -348,25 +367,6 @@ const machine = setup({
       Final: {
         type: "final",
       },
-    },
-  },
-  
-  {
-    actions: {
-      receiveError: assign({
-        partialCtx: ({ context, event }) => {
-          console.log("Error Occurred while fetching", event);
-          console.log("Current Context is ", context);
-          let partialCtxClone = Object.assign({}, context.partialCtx);
-          partialCtxClone.message = event.message;
-          partialCtxClone.success = false;
-          return partialCtxClone;
-        },
-      }),
-
-      // spawnFetchActor: assign({
-      //   fetchActorRef: ({ spawn }) => spawn(fetchActor),
-      // }),
     },
   }
 );
