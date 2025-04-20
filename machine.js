@@ -79,6 +79,8 @@ const machine = setup({
       accountDetails: {},
       selectedAccountNo: "",
       customerNo: "",
+      rtgsForm:{},
+      exceptionList:[],
     },
     states: {
       Idle: {
@@ -106,6 +108,8 @@ const machine = setup({
           FETCHACCOUNTDETAILS: "FetchAccountDetails",
           FETCHBENEFBANKLIST: "FetchBeneficiaryBankList",
           FETCHBENEFACCDETAILS: "FetchBeneficiaryAccountDetails",
+          RECEIVEOUTWARDRTGS: "ReceiveOutwardRtgs",
+          GETEXCEPTIONLIST:"GetExceptionList",
           POSTOUTWARDRTGS: "PostOutwardRtgs",
           SIGNOFF:{
             actions:[
@@ -285,7 +289,7 @@ const machine = setup({
         invoke: {
           id: 'FetchBeneficiaryBankList',
           src: 'promiseActor',
-          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiarybanklist`,'GET',null )),
+          input:() => ( createRequest( `${process.env.CAPI_URL}/getbeneficiarybanklist`,'GET',null )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
@@ -333,16 +337,65 @@ const machine = setup({
           },
         },
       },
-
+      //make it simpler, the request hitting should be in a separate state left it for later
+      ReceiveOutwardRtgs: {
+        entry:[
+          assign({
+            rtgsForm: ({event}) => {
+              console.log("Loading rtgs form in partial context", event);
+              return event.rtgsForm;
+            }
+          })
+        ],
+        invoke: {
+          id: 'receiveOutwardRtgs',
+          src: 'promiseActor',
+          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getexceptionlist`,'GET',{ activityCode: event.rtgsForm.activityCode })),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  exceptionList: ({event}) => {
+                    return event.output;
+                  },
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading success response in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    return partialCtxClone;
+                  },
+                }),
+                "sendPartialCtx"
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      GetExceptionList: {
+        entry:[
+          assign({
+            partialCtx: ({context, event}) => {
+              console.log("Loading exception list in partial context", event);
+              let partialCtxClone = Object.assign({}, context.partialCtx);
+              partialCtxClone.success = true;
+              partialCtxClone.data = context.exceptionList;
+              return partialCtxClone;
+            }
+          }),
+          "sendPartialCtx"
+        ],
+        always: {
+          target: "OutwardRtgs",
+        },
+      },
       PostOutwardRtgs: {
         invoke: {
           id: 'postOutwardRtgs',
           src: 'promiseActor',
-          input:({context, event}) => {
-            const modifiedRequest = {...event.rtgsForm, }
-            const request = createRequest( `${process.env.CAPI_URL}/createOutwardRtgs`,'POST',event.rtgsForm)
-            return request;
-          },
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/createOutwardRtgs`,'POST',event.rtgsForm)),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
