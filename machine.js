@@ -395,7 +395,7 @@ const machine = setup({
         invoke: {
           id: 'postOutwardRtgs',
           src: 'promiseActor',
-          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/createOutwardRtgs`,'POST',event.rtgsForm)),
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/createOutwardRtgs`,'POST',context.rtgsForm)),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
