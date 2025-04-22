@@ -62,6 +62,12 @@ const handler = async (machine, req, res) => {
     }
     else
     {
+        if(httpReq.transition != 'LOGIN')
+            return{
+                success:false,
+                message:'Unauthenticated Request'
+            }
+
         let jwtToken;
         let key;
         try

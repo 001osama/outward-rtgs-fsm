@@ -382,6 +382,7 @@ const machine = setup({
               let partialCtxClone = Object.assign({}, context.partialCtx);
               partialCtxClone.success = true;
               partialCtxClone.data = context.exceptionList;
+              context.exceptionList = [];
               return partialCtxClone;
             }
           }),
@@ -396,6 +397,32 @@ const machine = setup({
           id: 'postOutwardRtgs',
           src: 'promiseActor',
           input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/createOutwardRtgs`,'POST',context.rtgsForm)),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      FetchAdviceNos : {
+        invoke: {
+          id: 'fetchAdviceNos',
+          src: 'promiseActor',
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiaryaccountdetails`,'GET', {accOrIban: event.accOrIban, bankCode: event.bankCode} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
