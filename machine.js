@@ -17,7 +17,7 @@ const machine = setup({
       };
 
       if (
-        options.method &&
+        options.  method &&
         options.method.toUpperCase() === "GET" &&
         input.params
       ) {
@@ -406,7 +406,7 @@ const machine = setup({
         invoke: {
           id: 'fetchOutwardRtgs',
           src: 'promiseActor',
-          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getOutwardRtgs`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear })),
+          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getOutwardRTGS`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear })),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
