@@ -111,6 +111,8 @@ const machine = setup({
           RECEIVEOUTWARDRTGS: "ReceiveOutwardRtgs",
           GETEXCEPTIONLIST:"GetExceptionList",
           POSTOUTWARDRTGS: "PostOutwardRtgs",
+          FETCHOUTWARDRTGS: "FetchOutwardRtgs",
+          FETCHUNAUTHOUTWARDRTGSLIST:"FetchUnauthOutwardRtgsList",
           SIGNOFF:{
             actions:[
               assign({
@@ -374,6 +376,58 @@ const machine = setup({
           },
         },
       },
+      FetchUnauthOutwardRtgsList: {
+        invoke: {
+          id: 'fetchUnauthOutwardRtgsList',
+          src: 'promiseActor',
+          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getunauthorizedoutwardrtgslist`,'GET',null)),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading success response in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.data = event.output;
+                    partialCtxClone.success = true;
+                    return partialCtxClone;
+                  },
+                }),
+                "sendPartialCtx"
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      FetchOutwardRtgs:{
+        invoke: {
+          id: 'fetchOutwardRtgs',
+          src: 'promiseActor',
+          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getOutwardRtgs`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear })),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading success response in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.data = event.output;
+                    partialCtxClone.success = true;
+                    return partialCtxClone;
+                  },
+                }),
+                "sendPartialCtx"
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
       GetExceptionList: {
         entry:[
           assign({
@@ -382,7 +436,6 @@ const machine = setup({
               let partialCtxClone = Object.assign({}, context.partialCtx);
               partialCtxClone.success = true;
               partialCtxClone.data = context.exceptionList;
-              context.exceptionList = [];
               return partialCtxClone;
             }
           }),
