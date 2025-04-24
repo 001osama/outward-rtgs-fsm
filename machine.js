@@ -80,7 +80,9 @@ const machine = setup({
       selectedAccountNo: "",
       customerNo: "",
       rtgsForm:{},
-      exceptionList:[],
+      exceptionData:{},
+      exceptionList:[], //remove it once exception data is fully functional
+      voucherInfo:{},
     },
     states: {
       Idle: {
@@ -109,10 +111,14 @@ const machine = setup({
           FETCHBENEFBANKLIST: "FetchBeneficiaryBankList",
           FETCHBENEFACCDETAILS: "FetchBeneficiaryAccountDetails",
           RECEIVEOUTWARDRTGS: "ReceiveOutwardRtgs",
-          GETEXCEPTIONLIST:"GetExceptionList",
+          GETEXCEPTIONDATA:"GetExceptionData",
           POSTOUTWARDRTGS: "PostOutwardRtgs",
           FETCHOUTWARDRTGS: "FetchOutwardRtgs",
+          RECEIVEOUTWARDRTGSVOUCHERINFO: "ReceiveOutwardRtgsVoucherInfo",
+          CANCELOUTWARDRTGS:"CancelOutwardRtgs",
           FETCHUNAUTHOUTWARDRTGSLIST:"FetchUnauthOutwardRtgsList",
+          ISVOUCHEREXISTFORCANCELLATION:"IsVoucherExistForCancellation",
+          AUTHORIZEUSER: "AuthorizeUser",
           SIGNOFF:{
             actions:[
               assign({
@@ -352,13 +358,16 @@ const machine = setup({
         invoke: {
           id: 'receiveOutwardRtgs',
           src: 'promiseActor',
-          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getexceptionlist`,'GET',{ activityCode: event.rtgsForm.activityCode })),
+          input:({event}) => (createRequest(`${process.env.CAPI_URL}/getexceptionlist`,'GET',{ activityCode: event.rtgsForm.activityCode })),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
                 assign({
-                  exceptionList: ({event}) => {
-                    return event.output;
+                  exceptionData: ({event}) => {
+                    return {
+                      exceptionList: event.output,
+                      onAcknowledge: 'POSTOUTWARDRTGS',
+                    };
                   },
                   partialCtx: ({ context, event }) => {
                     console.log("Loading success response in partial context", event);
@@ -428,14 +437,14 @@ const machine = setup({
           },
         },
       },
-      GetExceptionList: {
+      GetExceptionData: {
         entry:[
           assign({
             partialCtx: ({context, event}) => {
               console.log("Loading exception list in partial context", event);
               let partialCtxClone = Object.assign({}, context.partialCtx);
               partialCtxClone.success = true;
-              partialCtxClone.data = context.exceptionList;
+              partialCtxClone.data = context.exceptionData;
               return partialCtxClone;
             }
           }),
@@ -471,11 +480,135 @@ const machine = setup({
           },
         },
       },
+      ReceiveOutwardRtgsVoucherInfo: {
+        entry: [
+          assign({
+            voucherInfo: ({event}) => {
+              console.log("Loading voucher no in context", event);
+              return {voucherNo: event.voucherNo, voucherYear: event.voucherYear};
+            }
+          })
+        ],
+        invoke: {
+          id: 'receiveOutwardRtgsVoucherInfo',
+          src: 'promiseActor',
+          input:({event}) => (
+            createRequest( 
+              `${process.env.CAPI_URL}/getexceptionlist`, 'GET',{ activityCode: event.activityCode }
+            )
+          ),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  exceptionData: ({event}) => {
+
+                    return {
+                      exceptionList: event.output,
+                      onAcknowledge:'AUTHORIZEUSER'
+                    };
+                  },
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      CancelOutwardRtgs : {
+        invoke: {
+          id: 'cancelOutwardRtgs',
+          src: 'promiseActor',
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/cancelOutwardRtgs`,'POST', { voucherNo: context.voucherInfo.voucherNo, voucherYear: context.voucherInfo.voucherYear } )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = context.voucherInfo;
+                    // context.voucherInfo = {};
+                    return partialCtxClone;
+                  },
+                }),
+                "sendPartialCtx"
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      AuthorizeUser:{
+        invoke: {
+          id: 'authorizeUser',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/authorizeUser`,'POST', {loginId: event.loginId, password: event.password})),
+          onDone: {
+            target: 'CancelOutwardRtgs',
+            // actions: [
+            //     assign({
+            //       partialCtx: ({ context, event }) => {
+            //         console.log("Loading account no in partial context", event);
+            //         let partialCtxClone = Object.assign({}, context.partialCtx);
+            //         partialCtxClone.success = true;
+            //         partialCtxClone.data = event.output;
+            //         return partialCtxClone;
+            //       },
+            //     }),
+            //     'sendPartialCtx'
+            // ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
       FetchAdviceNos : {
         invoke: {
           id: 'fetchAdviceNos',
           src: 'promiseActor',
           input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiaryaccountdetails`,'GET', {accOrIban: event.accOrIban, bankCode: event.bankCode} )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      IsVoucherExistForCancellation: {
+        invoke: {
+          id: 'isVoucherExistForCancellation',
+          src: 'promiseActor',
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/iscancelvoucherexist`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
