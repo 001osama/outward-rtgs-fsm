@@ -33,6 +33,7 @@ const machine = setup({
       return await fetch(url, options)
         .then((response) => {
           console.log("Getting response from API. Reponse: ", response);
+          
           return response.json();
         })
         .then((resolvedResponse) => {
@@ -81,7 +82,7 @@ const machine = setup({
       customerNo: "",
       rtgsForm:{},
       exceptionData:{},
-      exceptionList:[], //remove it once exception data is fully functional
+      exceptionList:[], 
       voucherInfo:{},
     },
     states: {
@@ -120,6 +121,7 @@ const machine = setup({
           ISVOUCHEREXISTFORCANCELLATION:"IsVoucherExistForCancellation",
           AUTHORIZEUSER: "AuthorizeUser",
           AUTHORIZEOUTWARDRTGS: "AuthorizeOutwardRtgs",
+          FETCHEXCELREPORT: "FetchExcelReport",
           SIGNOFF:{
             actions:[
               assign({
@@ -644,6 +646,32 @@ const machine = setup({
           id: 'isVoucherExistForCancellation',
           src: 'promiseActor',
           input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/iscancelvoucherexist`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      FetchExcelReport: {
+        invoke: {
+          id: 'fetchExcelReport',
+          src: 'promiseActor',
+          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/downloadExcelReport`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
