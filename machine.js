@@ -122,6 +122,7 @@ const machine = setup({
           AUTHORIZEUSER: "AuthorizeUser",
           AUTHORIZEOUTWARDRTGS: "AuthorizeOutwardRtgs",
           FETCHEXCELREPORT: "FetchExcelReport",
+          FETCHCHEQUESTATUS: "FetchChequeStatus",
           SIGNOFF:{
             actions:[
               assign({
@@ -567,7 +568,12 @@ const machine = setup({
         invoke: {
           id: 'authorizeUser',
           src: 'promiseActor',
-          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/authorizeUser`,'POST', {loginId: event.loginId, password: event.password})),
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/authorizeUser`,'POST', {
+            loginId: event.loginId, 
+            password: event.password,
+            voucherNo: event.voucherNo,
+            voucherYear: event.voucherYear,
+          })),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
@@ -593,7 +599,7 @@ const machine = setup({
         invoke: {
           id: 'authorizeOutwardRtgs',
           src: 'promiseActor',
-          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/authorizeOutwardRtgs`,'POST', {voucherNo: event.voucherNo, voucherYear: event.voucherYear})),
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/authorizeOutwardRtgs`,'POST', {voucherNo: event.voucherNo, voucherYear: event.voucherYear, loginId: event.loginId})),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
@@ -672,6 +678,32 @@ const machine = setup({
           id: 'fetchExcelReport',
           src: 'promiseActor',
           input:({event}) => ( createRequest( `${process.env.CAPI_URL}/downloadExcelReport`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
+      FetchChequeStatus: {
+        invoke: {
+          id: 'FetchChequeStatus',
+          src: 'promiseActor',
+          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/validatecheque`,'GET', {accountNo: event.accountNo, chequeNo: event.chequeNo} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
