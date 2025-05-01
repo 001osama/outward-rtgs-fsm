@@ -102,7 +102,14 @@ const handler = async (machine, req, res) => {
                     .substring(0, 8);
 
             jwtToken = jwt.sign(
-                { loginId: user.loginId, branchCode: user.branchCode, sid:key },
+                { 
+                    loginId: user.loginId, 
+                    branchCode: user.branchCode, 
+                    roleId: user.role, 
+                    lastLoggedInDate: user.lastLoggedInDate, 
+                    currentLoggedInDate: user.currentLoggedInDate, 
+                    sid:key 
+                },
                 process.env.JWTSECRET,
                 { expiresIn: "24h" }
             );
