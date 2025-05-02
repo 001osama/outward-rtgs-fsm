@@ -106,7 +106,8 @@ const machine = setup({
       },
       OutwardRtgs: {
         on: {
-          FETCHLOV: "FetchBranchList",
+          FETCHLOV: "FetchLov",
+          FETCHBRANCHLIST: "FetchBranchList",
           FETCHCUSTACCOUNTS: "FetchCustomerAccounts",
           FETCHACCOUNTDETAILS: "FetchAccountDetails",
           FETCHBENEFBANKLIST: "FetchBeneficiaryBankList",
@@ -140,9 +141,9 @@ const machine = setup({
           }
         },
       },
-      FetchBranchList: {
+      FetchLov: {
         invoke: {
-          id: 'fetchBranchList',
+          id: 'fetchLov',
           src: 'promiseActor',
           input:({context, event}) => (createRequest(`${process.env.CAPI_URL}/getbranchlist`,'GET',null )),
           onDone: {
@@ -154,6 +155,29 @@ const machine = setup({
                     return event.output;
                   }
                 })
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          }
+        },
+      },
+      FetchBranchList: {
+        invoke: {
+          id: 'fetchBranchList',
+          src: 'promiseActor',
+          input:({context, event}) => (createRequest(`${process.env.CAPI_URL}/getbranchlist`,'GET',null )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Setting branchList data in partial context", event);
+                    return {success:true, data:event.output};
+                  }
+                }),
+                'sendPartialCtx',
             ]
           },
           onError: {
