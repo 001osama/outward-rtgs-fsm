@@ -122,7 +122,7 @@ const machine = setup({
           ISVOUCHEREXISTFORCANCELLATION:"IsVoucherExistForCancellation",
           AUTHORIZEUSER: "AuthorizeUser",
           AUTHORIZEOUTWARDRTGS: "AuthorizeOutwardRtgs",
-          FETCHEXCELREPORT: "FetchExcelReport",
+          FETCHVOUCHEREXCEL: "FetchVoucherExcel",
           FETCHCHEQUESTATUS: "FetchChequeStatus",
           FETCHRTGSPDFREPORT: "FetchRtgsPdfReport",
           SIGNOFF:{
@@ -698,11 +698,11 @@ const machine = setup({
           },
         },
       },
-      FetchExcelReport: {
+      FetchVoucherExcel: {
         invoke: {
-          id: 'fetchExcelReport',
+          id: 'fetchVoucherExcel',
           src: 'promiseActor',
-          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/downloadExcelReport`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
+          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/getVoucherExcel`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
