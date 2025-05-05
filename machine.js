@@ -125,6 +125,7 @@ const machine = setup({
           FETCHVOUCHEREXCEL: "FetchVoucherExcel",
           FETCHCHEQUESTATUS: "FetchChequeStatus",
           FETCHRTGSPDFREPORT: "FetchRtgsPdfReport",
+          FETCHRTGSREPORT: "FetchRtgsReport",
           SIGNOFF:{
             actions:[
               assign({
@@ -750,6 +751,32 @@ const machine = setup({
           },
         },
       },
+      FetchRtgsReport: {
+        invoke: {
+          id: 'fetchRtgsReport',
+          src: 'promiseActor',
+          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/downloadRtgsReport`,'POST', event.reportForm )),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading account no in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.success = true;
+                    partialCtxClone.data = event.output;
+                    return partialCtxClone;
+                  },
+                }),
+                'sendPartialCtx'
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      }, 
       FetchChequeStatus: {
         invoke: {
           id: 'FetchChequeStatus',
