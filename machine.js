@@ -567,7 +567,7 @@ const machine = setup({
         invoke: {
           id: 'cancelOutwardRtgs',
           src: 'promiseActor',
-          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/cancelOutwardRtgs`,'POST', { voucherNo: event.voucherNo, voucherYear: event.voucherYear } )),
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/cancelOutwardRtgs`,'POST', { voucherNo: event.voucherNo, voucherYear: event.voucherYear, loginId: event.loginId } )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
