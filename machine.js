@@ -597,8 +597,8 @@ const machine = setup({
           input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/authorizeUser`,'POST', {
             loginId: event.loginId, 
             password: event.password,
-            voucherNo: event.voucherNo,
-            voucherYear: event.voucherYear,
+            // voucherNo: event.voucherNo,
+            // voucherYear: event.voucherYear,
           })),
           onDone: {
             target: 'OutwardRtgs',
