@@ -124,6 +124,7 @@ const machine = setup({
           AUTHORIZEOUTWARDRTGS: "AuthorizeOutwardRtgs",
           FETCHVOUCHERREPORT: "FetchVoucherReport",
           FETCHCHEQUESTATUS: "FetchChequeStatus",
+          FETCHREASONLIST: "FetchReasonList",
           // FETCHRTGSPDFREPORT: "FetchRtgsPdfReport",
           FETCHRTGSREPORT: "FetchRtgsReport",
           SIGNOFF:{
@@ -493,6 +494,32 @@ const machine = setup({
           },
         },
       },
+      FetchReasonList: {
+        invoke: {
+          id: 'fetchReasonList',
+          src: 'promiseActor',
+          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getreasonlist`,'GET', null)),
+          onDone: {
+            target: 'OutwardRtgs',
+            actions: [
+                assign({
+                  partialCtx: ({ context, event }) => {
+                    console.log("Loading success response in partial context", event);
+                    let partialCtxClone = Object.assign({}, context.partialCtx);
+                    partialCtxClone.data = { reasonList: event.output };
+                    partialCtxClone.success = true;
+                    return partialCtxClone;
+                  },
+                }),
+                "sendPartialCtx"
+            ]
+          },
+          onError: {
+            target: 'OutwardRtgs',
+            actions: ["receiveError", "sendPartialCtx"]
+          },
+        },
+      },
       PostOutwardRtgs: {
         invoke: {
           id: 'postOutwardRtgs',
@@ -567,7 +594,7 @@ const machine = setup({
         invoke: {
           id: 'cancelOutwardRtgs',
           src: 'promiseActor',
-          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/cancelOutwardRtgs`,'POST', { voucherNo: event.voucherNo, voucherYear: event.voucherYear, loginId: event.loginId } )),
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/cancelOutwardRtgs`,'POST', { voucherNo: event.voucherNo, voucherYear: event.voucherYear, loginId: event.loginId, cancellationReason: event.cancellationReason } )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
