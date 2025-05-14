@@ -122,9 +122,9 @@ const machine = setup({
           ISVOUCHEREXISTFORCANCELLATION:"IsVoucherExistForCancellation",
           AUTHORIZEUSER: "AuthorizeUser",
           AUTHORIZEOUTWARDRTGS: "AuthorizeOutwardRtgs",
-          FETCHVOUCHEREXCEL: "FetchVoucherExcel",
+          FETCHVOUCHERREPORT: "FetchVoucherReport",
           FETCHCHEQUESTATUS: "FetchChequeStatus",
-          FETCHRTGSPDFREPORT: "FetchRtgsPdfReport",
+          // FETCHRTGSPDFREPORT: "FetchRtgsPdfReport",
           FETCHRTGSREPORT: "FetchRtgsReport",
           SIGNOFF:{
             actions:[
@@ -699,24 +699,24 @@ const machine = setup({
           },
         },
       },
-      FetchVoucherExcel: {
+      FetchVoucherReport: {
         invoke: {
-          id: 'fetchVoucherExcel',
+          id: 'fetchVoucherReport',
           src: 'promiseActor',
-          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/getVoucherExcel`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
+          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/downloadVoucherReport`,'POST', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
-                assign({
-                  partialCtx: ({ context, event }) => {
-                    console.log("Loading account no in partial context", event);
-                    let partialCtxClone = Object.assign({}, context.partialCtx);
-                    partialCtxClone.success = true;
-                    partialCtxClone.data = event.output;
-                    return partialCtxClone;
-                  },
-                }),
-                'sendPartialCtx'
+              assign({
+                partialCtx: ({ context, event }) => {
+                  console.log("Loading voucher report in partial context", event);
+                  let partialCtxClone = Object.assign({}, context.partialCtx);
+                  partialCtxClone.success = true;
+                  partialCtxClone.data = event.output;
+                  return partialCtxClone;
+                },
+              }),
+              'sendPartialCtx'
             ]
           },
           onError: {
@@ -725,32 +725,32 @@ const machine = setup({
           },
         },
       },
-      FetchRtgsPdfReport: {
-        invoke: {
-          id: 'fetchRtgsPdfReport',
-          src: 'promiseActor',
-          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/downloadBirtReport`,'GET', null )),
-          onDone: {
-            target: 'OutwardRtgs',
-            actions: [
-                assign({
-                  partialCtx: ({ context, event }) => {
-                    console.log("Loading account no in partial context", event);
-                    let partialCtxClone = Object.assign({}, context.partialCtx);
-                    partialCtxClone.success = true;
-                    partialCtxClone.data = event.output;
-                    return partialCtxClone;
-                  },
-                }),
-                'sendPartialCtx'
-            ]
-          },
-          onError: {
-            target: 'OutwardRtgs',
-            actions: ["receiveError", "sendPartialCtx"]
-          },
-        },
-      },
+      // FetchRtgsPdfReport: {
+      //   invoke: {
+      //     id: 'fetchRtgsPdfReport',
+      //     src: 'promiseActor',
+      //     input:({event}) => ( createRequest( `${process.env.CAPI_URL}/downloadBirtReport`,'GET', null )),
+      //     onDone: {
+      //       target: 'OutwardRtgs',
+      //       actions: [
+      //           assign({
+      //             partialCtx: ({ context, event }) => {
+      //               console.log("Loading account no in partial context", event);
+      //               let partialCtxClone = Object.assign({}, context.partialCtx);
+      //               partialCtxClone.success = true;
+      //               partialCtxClone.data = event.output;
+      //               return partialCtxClone;
+      //             },
+      //           }),
+      //           'sendPartialCtx'
+      //       ]
+      //     },
+      //     onError: {
+      //       target: 'OutwardRtgs',
+      //       actions: ["receiveError", "sendPartialCtx"]
+      //     },
+      //   },
+      // },
       FetchRtgsReport: {
         invoke: {
           id: 'fetchRtgsReport',
