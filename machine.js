@@ -328,7 +328,7 @@ const machine = setup({
         invoke: {
           id: 'FetchBeneficiaryBankList',
           src: 'promiseActor',
-          input:() => ( createRequest( `${process.env.CAPI_URL}/getbeneficiarybanklist`,'GET',null )),
+          input:({event}) => ( createRequest( `${process.env.CAPI_URL}/getbeneficiarybanklist`,'GET',{searchTerm: event.searchTerm} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
