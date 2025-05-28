@@ -1,5 +1,7 @@
 const session = require("express-session");
 const { assign } = require("xstate");
+const fs = require("fs");
+const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -37,9 +39,10 @@ function parseJwt(token) {
 //   } catch (ex) {
 //     return null;
 //   }
+const publicKey = fs.readFileSync(path.join('./', "publicKey.pem"), "utf8");
 try {
-    const decoded = jwt.verify(token, process.env.JWTSECRET, {
-      algorithms: ["HS256"],
+    const decoded = jwt.verify(token, publicKey, {
+      algorithms: ["RS256"],
     });
     return decoded;
   } 
@@ -77,7 +80,7 @@ const handler = async (machine, req, res) => {
     let jwtToken;
     let key;
     try {
-      const response = await fetch(`${process.env.CAPI_URL}/getuserinfo`, {
+      const response = await fetch(`${process.env.CAPI_URL}/login`, {
         method: "POST",
         body: JSON.stringify(reqData),
         headers: { "Content-Type": "application/json" },
@@ -93,36 +96,37 @@ const handler = async (machine, req, res) => {
         });
       }
 
-      const user = data.data;
+      const token = data.data;
+      const userData = parseJwt(token);
       // const user = {
       //     userName:"Osama",
       //     branchCode:"1234"
       // }
       const timestamp = Date.now().toString();
 
-      key = crypto
-        .createHash("sha1")
-        .update(user.loginId + user.branchCode + timestamp)
-        .digest("hex")
-        .substring(0, 8);
+    //   key = crypto
+    //     .createHash("sha1")
+    //     .update(user.loginId + user.branchCode + timestamp)
+    //     .digest("hex")
+    //     .substring(0, 8);
 
-      jwtToken = jwt.sign(
-        {
-          loginId: user.loginId,
-          branchCode: user.branchCode,
-          roleId: user.role,
-          lastLoggedInDate: user.lastLoggedInDate,
-          currentLoggedInDate: user.currentLoggedInDate,
-          sid: key,
-        },
-        process.env.JWTSECRET,
-        {
-          expiresIn: "24h",
-          algorithm: "HS256",
-        }
-      );
+    //   jwtToken = jwt.sign(
+    //     {
+    //       loginId: user.loginId,
+    //       branchCode: user.branchCode,
+    //       roleId: user.role,
+    //       lastLoggedInDate: user.lastLoggedInDate,
+    //       currentLoggedInDate: user.currentLoggedInDate,
+    //       sid: key,
+    //     },
+    //     process.env.JWTSECRET,
+    //     {
+    //       expiresIn: "24h",
+    //       algorithm: "HS256",
+    //     }
+    //   );
 
-      console.log("Generated JWT:", jwtToken);
+      console.log("Generated JWT:", token);
     } catch (ex) {
       console.log("Error occured when logging in");
       console.log(ex);
