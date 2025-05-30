@@ -272,7 +272,7 @@ const machine = setup({
         invoke: {
           id: 'fetchCustomerAccounts',
           src: 'promiseActor',
-          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/getcustomeraccountnos`,'GET',{customerNo: event.customerNo} )),
+          input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/getcustomeraccountnos`,'GET',{ customerNo: event.customerNo, branchCode: event.branchCode } )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
@@ -420,7 +420,7 @@ const machine = setup({
         invoke: {
           id: 'fetchUnauthOutwardRtgsList',
           src: 'promiseActor',
-          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getunauthorizedoutwardrtgslist`,'GET',null)),
+          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getunauthorizedoutwardrtgslist`,'GET',{ branchCode: event.branchCode})),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
@@ -446,7 +446,7 @@ const machine = setup({
         invoke: {
           id: 'fetchOutwardRtgs',
           src: 'promiseActor',
-          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getOutwardRTGS`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear })),
+          input:({event}) => (createRequest( `${process.env.CAPI_URL}/getOutwardRTGS`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear, branchCode: event.branchCode })),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
@@ -624,6 +624,7 @@ const machine = setup({
           input:({context, event}) => (createRequest( `${process.env.CAPI_URL}/authorizeUser`,'POST', {
             loginId: event.loginId, 
             password: event.password,
+            branchCode: event.branchCode,
             // voucherNo: event.voucherNo,
             // voucherYear: event.voucherYear,
           })),
@@ -704,7 +705,7 @@ const machine = setup({
         invoke: {
           id: 'isVoucherExistForCancellation',
           src: 'promiseActor',
-          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/iscancelvoucherexist`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear} )),
+          input:({context, event}) => ( createRequest( `${process.env.CAPI_URL}/iscancelvoucherexist`,'GET', {voucherNo: event.voucherNo, voucherYear: event.voucherYear, branchCode: event.branchCode} )),
           onDone: {
             target: 'OutwardRtgs',
             actions: [
